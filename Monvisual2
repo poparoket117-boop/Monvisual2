@@ -1,4 +1,4 @@
--- Monvisual Island (Final v40)
+-- Monvisual Island (Final v41) — с переключением на классику
 if _G.Monvisual_Loaded then
     pcall(function() _G.Monvisual_ScreenGui:Destroy() end)
     _G.Monvisual_Loaded = false
@@ -12,6 +12,7 @@ local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local Debris = game:GetService("Debris")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Player = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
@@ -500,7 +501,6 @@ blur.Name = "MonvisualBlur"
 blur.Size = 0
 blur.Parent = Lighting
 
--- Остров
 local island = Instance.new("TextButton")
 island.AnchorPoint = Vector2.new(0.5, 0)
 island.Size = UDim2.new(0, 158, 0, 34)
@@ -547,7 +547,6 @@ task.spawn(function()
     end
 end)
 
--- Главное меню (island style)
 local main = Instance.new("Frame")
 main.Size = UDim2.new(0, 720, 0, 400)
 main.Position = UDim2.new(0.5, -360, 0.5, -200)
@@ -555,7 +554,6 @@ main.BackgroundTransparency = 1
 main.Visible = false
 main.Parent = ScreenGui
 
--- Левая колонка
 local left = Instance.new("Frame")
 left.Size = UDim2.new(0, 44, 0, 340)
 left.Position = UDim2.new(0, 0, 0, 20)
@@ -594,7 +592,6 @@ end
 local cosmeticBtn = makeLeftBtn(0, "cosmetic")
 local menuBtn = makeLeftBtn(0.5, "menu")
 
--- 3 панели (уменьшены, чтобы влезали)
 local panels = Instance.new("Frame")
 panels.Size = UDim2.new(0, 645, 0, 340)
 panels.Position = UDim2.new(0, 56, 0, 20)
@@ -654,7 +651,6 @@ local visualPanel = makePanel(0, "visual")
 local shadersPanel = makePanel(220, "shaders")
 local settingPanel = makePanel(440, "setting")
 
--- Нижние кнопки
 local bottom = Instance.new("Frame")
 bottom.Size = UDim2.new(0, 380, 0, 40)
 bottom.Position = UDim2.new(0.5, -190, 1, -32)
@@ -678,7 +674,6 @@ local function makeBottomBtn(xPos, text, cb)
     return b
 end
 
--- Подменю (общее)
 local subMenus = {}
 local function makeSubMenu(name, title)
     local f = Instance.new("Frame")
@@ -752,7 +747,6 @@ local menuMenu, menuX, menuScroll = makeSubMenu("menu", "Menu")
 local profileMenu, profileX, profileScroll = makeSubMenu("profile", "Profile")
 local themeMenu, themeX, themeScroll = makeSubMenu("theme", "Theme")
 
--- Создание карточки-функции
 local function createFunctionCard(parent, name, getState, callback, settingsFunc)
     local card = Instance.new("Frame")
     card.Size = UDim2.new(1, -8, 0, 34)
@@ -814,9 +808,9 @@ local function createFunctionCard(parent, name, getState, callback, settingsFunc
     end
 
     toggle.MouseButton1Click:Connect(function()
-        local newState = not getState()
-        callback(newState)
-        if newState then
+        local ns = not getState()
+        callback(ns)
+        if ns then
             toggle.BackgroundColor3 = BLACK
             toggle.Text = "ON"
             toggle.TextColor3 = WHITE
@@ -829,7 +823,6 @@ local function createFunctionCard(parent, name, getState, callback, settingsFunc
     end)
 end
 
--- Окно настроек
 local function openSettings(title, sliders)
     local existing = ScreenGui:FindFirstChild("Settings_" .. title)
     if existing then existing:Destroy() return end
@@ -941,31 +934,26 @@ local function openSettings(title, sliders)
     end
 end
 
--- ===== VISUAL =====
+-- VISUAL
 createFunctionCard(visualPanel, "FOV", function() return settings.fovEnabled end,
     function(on) settings.fovEnabled=on ApplyFOV() end,
     function() openSettings("FOV", {{name="FOV", min=30, max=120, default=settings.fovValue, callback=function(v) settings.fovValue=v ApplyFOV() end}}) end)
-
 createFunctionCard(visualPanel, "Растяг", function() return settings.stretchEnabled end,
     function(on) settings.stretchEnabled=on end,
     function() openSettings("Растяг", {{name="Фактор", min=50, max=100, default=settings.STRETCH_FACTOR*100, callback=function(v)
         settings.STRETCH_FACTOR=v/100
         stretchCFrame=CFrame.new(0,0,0, 1,0,0, 0,settings.STRETCH_FACTOR,0, 0,0,1) end}}) end)
-
 createFunctionCard(visualPanel, "Партиклы", function() return settings.particlesEnabled end,
     function(on) settings.particlesEnabled=on ApplyParticles() end,
     function() openSettings("Партиклы", {{name="Плотность", min=0.5, max=50, default=settings.particlesDensity, callback=function(v) settings.particlesDensity=v end}}) end)
-
 createFunctionCard(visualPanel, "Ворлд партиклы", function() return settings.skyParticlesEnabled end,
     function(on) settings.skyParticlesEnabled=on ApplySkyParticles() end,
     function() openSettings("Ворлд партиклы", {{name="Плотность", min=0.5, max=50, default=settings.skyParticlesDensity, callback=function(v)
         settings.skyParticlesDensity=v
         if settings.skyParticlesEnabled then ApplySkyParticles() end end}}) end)
-
 createFunctionCard(visualPanel, "Movement Trails", function() return settings.trailsEnabled end,
     function(on) settings.trailsEnabled=on ApplyTrails() end,
     function() openSettings("Trails", {{name="Прозрачность", min=0.1, max=1, default=settings.trailsTransparency, callback=function(v) settings.trailsTransparency=v end}}) end)
-
 createFunctionCard(visualPanel, "Target ESP", function() return settings.targetESPEnabled end,
     function(on)
         settings.targetESPEnabled=on
@@ -974,55 +962,44 @@ createFunctionCard(visualPanel, "Target ESP", function() return settings.targetE
             espDiamonds = {}
         end
     end, nil)
-
 createFunctionCard(visualPanel, "Волна при прыжке", function() return settings.landingCircleEnabled end,
     function(on) settings.landingCircleEnabled=on end,
     function() openSettings("Волна при прыжке", {
         {name="Размер", min=0.10, max=5, default=settings.rippleSize, callback=function(v) settings.rippleSize=v end},
         {name="Прозрачность", min=0, max=1, default=settings.rippleTransparency, callback=function(v) settings.rippleTransparency=v end}
     }) end)
-
 createFunctionCard(visualPanel, "Туман", function() return settings.fogEnabled end,
     function(on) settings.fogEnabled=on ApplyFog() end,
     function() openSettings("Туман", {{name="Дальность", min=50, max=1000, default=settings.fogEnd, callback=function(v) settings.fogEnd=v ApplyFog() end}}) end)
-
 createFunctionCard(visualPanel, "Ночь / День", function() return settings.dayNightEnabled end,
     function(on) settings.dayNightEnabled=on ApplyDayNight() end,
     function() openSettings("Ночь / День", {{name="Время", min=0, max=24, default=settings.dayNightTime, callback=function(v) settings.dayNightTime=v ApplyDayNight() end}}) end)
-
 createFunctionCard(visualPanel, "Death Effect", function() return settings.deathEffectEnabled end,
     function(on) settings.deathEffectEnabled=on ApplyDeathEffect() end, nil)
 
--- ===== SHADERS =====
+-- SHADERS
 createFunctionCard(shadersPanel, "RTX Тени", function() return settings.rtxShadowsEnabled end,
     function(on) settings.rtxShadowsEnabled=on ApplyRTX() end,
     function() openSettings("RTX Тени", {{name="Сила", min=0.1, max=1, default=settings.rtxShadowsIntensity, callback=function(v) settings.rtxShadowsIntensity=v ApplyRTX() end}}) end)
-
 createFunctionCard(shadersPanel, "RTX Отражения", function() return settings.rtxReflectionsEnabled end,
     function(on) settings.rtxReflectionsEnabled=on ApplyRTX() end, nil)
-
 createFunctionCard(shadersPanel, "Свечение", function() return settings.glowEnabled end,
     function(on) settings.glowEnabled=on ApplyGlow() end,
     function() openSettings("Свечение", {{name="Сила", min=0, max=10, default=settings.glowIntensity, callback=function(v) settings.glowIntensity=v ApplyGlow() end}}) end)
-
 createFunctionCard(shadersPanel, "Свечение вокруг меня", function() return settings.auraEnabled end,
     function(on) settings.auraEnabled=on ApplyAura() end,
     function() openSettings("Свечение вокруг меня", {
         {name="Яркость", min=0, max=20, default=settings.auraBrightness, callback=function(v) settings.auraBrightness=v ApplyAura() end},
         {name="Радиус", min=1, max=60, default=settings.auraRange, callback=function(v) settings.auraRange=v ApplyAura() end}
     }) end)
-
 createFunctionCard(shadersPanel, "Шейдер Скай", function() return settings.skyShaderEnabled end,
     function(on) settings.skyShaderEnabled=on ApplySky() end, nil)
 
--- ===== КОСМЕТИКА (Headless + заготовка под будущее) =====
+-- COSMETIC
 createFunctionCard(cosmeticScroll, "Headless", function() return settings.headlessEnabled end,
     function(on) settings.headlessEnabled=on ApplyHeadless() end, nil)
 
--- Заготовка под будущую косметику: просто добавь сюда createFunctionCard(cosmeticScroll, "Название", ...)
-
--- ===== МЕНЮ (переключение остров/классика) =====
-local menuMode = "island" -- island / classic
+-- ===== MENU (ПЕРЕКЛЮЧЕНИЕ) =====
 local function makeMenuItem(text, cb)
     local b = Instance.new("TextButton")
     b.Size = UDim2.new(1, -8, 0, 40)
@@ -1042,16 +1019,33 @@ local function makeMenuItem(text, cb)
     b.MouseButton1Click:Connect(cb)
     return b
 end
-makeMenuItem("Остров (текущее)", function()
-    menuMode = "island"
-    print("[monvisual] Меню: Остров")
-end)
-makeMenuItem("Классика (прошлое меню)", function()
-    menuMode = "classic"
-    print("[monvisual] Меню: Классика")
+
+makeMenuItem("Меню №2 (Остров)", function()
+    -- уже активно
 end)
 
--- ===== ПРОФИЛЬ =====
+makeMenuItem("Меню №1 (Классика)", function()
+    -- Удаляем остров и всё связанное
+    if _G.Monvisual_ScreenGui then _G.Monvisual_ScreenGui:Destroy() _G.Monvisual_ScreenGui = nil end
+    for _, obj in ipairs(Lighting:GetChildren()) do
+        if obj.Name == "MonvisualBlur" then obj:Destroy() end
+        if obj.Name == "MonvisualBloom" then obj:Destroy() end
+        if obj.Name == "MonvisualSky" then obj:Destroy() end
+        if obj.Name == "MonvisualAtmo" then obj:Destroy() end
+        if obj.Name == "MonvisualSun" then obj:Destroy() end
+    end
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if obj.Name == "MonvisualSkyParticles" or obj.Name == "MonvisualTrails" then
+            obj:Destroy()
+        end
+    end
+    _G.Monvisual_Loaded = false
+    task.wait(0.2)
+    -- Грузим классику
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/poparoket117-boop/Monvisual/refs/heads/main/Monvisual"))()
+end)
+
+-- ПРОФИЛЬ
 local function makeProfileRow(text)
     local l = Instance.new("TextLabel")
     l.Size = UDim2.new(1, -8, 0, 36)
@@ -1070,7 +1064,6 @@ local function makeProfileRow(text)
     return l
 end
 
--- Аватар
 local avatar = Instance.new("ImageLabel")
 avatar.Size = UDim2.new(0, 60, 0, 60)
 avatar.BackgroundColor3 = BLACK
@@ -1091,19 +1084,21 @@ end)
 
 makeProfileRow("Ник: " .. Player.Name)
 makeProfileRow("Отображаемое: " .. Player.DisplayName)
-local robuxRow = makeProfileRow("Robux: ...")
+makeProfileRow("Robux: недоступно (Roblox API)")
+makeProfileRow("Place ID: " .. game.PlaceId)
 task.spawn(function()
-    local ok, amount = pcall(function()
-        return game:GetService("MarketplaceService"):GetUserProductInfo(Player.UserId)
+    local ok, info = pcall(function()
+        return MarketplaceService:GetProductInfo(game.PlaceId)
     end)
-    -- Прямого API для баланса Robux нет. Показываем заглушку.
-    robuxRow.Text = "Robux: недоступно (Roblox API)"
+    if ok and info then
+        makeProfileRow("Игра: " .. info.Name)
+    else
+        makeProfileRow("Игра: неизвестно")
+    end
 end)
-makeProfileRow("Плейс: " .. game.PlaceId)
-makeProfileRow("Игра: " .. game:GetService("MarketplaceService"):GetProductInfo(game.PlaceId).Name)
 makeProfileRow("User ID: " .. Player.UserId)
 
--- ===== ТЕМЫ =====
+-- ТЕМЫ
 local themes = {
     {name = "Фиолетовая", hue = 270},
     {name = "Синяя", hue = 220},
@@ -1139,7 +1134,6 @@ for _, t in ipairs(themes) do
             themeCustomColor = nil
             themeHue = t.hue
         end
-        -- Обновляем обводки меню/панелей и акценты
         local accent = getAccentColor()
         islandStroke.Color = accent
         for _, sm in pairs(subMenus) do
@@ -1152,7 +1146,7 @@ for _, t in ipairs(themes) do
     end)
 end
 
--- ===== ЛОГИКА =====
+-- ЛОГИКА
 local open = false
 
 local function updateIsland()
@@ -1222,4 +1216,4 @@ themeX.MouseButton1Click:Connect(showMain)
 
 updateIsland()
 
-print("[monvisual] Island full loaded!")
+print("[monvisual] Island loaded!")
